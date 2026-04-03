@@ -3,41 +3,73 @@
 namespace App\Controllers;
 
 use App\Framework\Controller;
+use App\Middleware\AuthMiddleware;
 use App\Repositories\StudentRepository;
 use App\Repositories\UserRepository;
 
 class StudentProfileController extends Controller
 {
-    public function edit()
+    /**
+     * GET /api/student/profile
+     */
+    public function show(): void
     {
-        $this->requireAuth('student');
+        $user = AuthMiddleware::validate('student');
 
         $studentRepo = new StudentRepository();
         $userRepo = new UserRepository();
-        
-        $profile = $studentRepo->findByUserId($_SESSION['user_id']);
-        $user = $userRepo->findById($_SESSION['user_id']);
-        
-        $message = null;
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $dob = $_POST['date_of_birth'];
-            $bio = $_POST['bio'];
-            $studentRepo->save($_SESSION['user_id'], $dob, $bio);
+        $profile = $studentRepo->findByUserId($user->user_id);
+        $userData = $userRepo->findById($user->user_id);
 
-            $fname = $_POST['first_name'];
-            $lname = $_POST['last_name'];
-            $userRepo->update($_SESSION['user_id'], $fname, $lname, $user->email);
+        $this->json([
+            'id' => $userData->id,
+            'email' => $userData->email,
+            'first_name' => $userData->first_name,
+            'last_name' => $userData->last_name,
+            'date_of_birth' => $profile ? $profile['date_of_birth'] : null,
+            'bio' => $profile ? $profile['bio'] : null
+        ]);
+    }
 
-            $message = "Profile saved!";
-            $profile = $studentRepo->findByUserId($_SESSION['user_id']);
-            $user = $userRepo->findById($_SESSION['user_id']);
+    /**
+     * PUT /api/student/profile
+     */
+    public function update(): void
+    {
+        $user = AuthMiddleware::validate('student');
+        $body = $this->getBody();
+
+        $studentRepo = new StudentRepository();
+        $userRepo = new UserRepository();
+
+        $fname = $body['first_name'] ?? '';
+        $lname = $body['last_name'] ?? '';
+        $dob = $body['date_of_birth'] ?? '';
+        $bio = $body['bio'] ?? '';
+
+        if (empty(trim($fname)) || empty(trim($lname))) {
+            $this->json(['error' => 'Validation failed', 'details' => [
+                'first_name' => empty(trim($fname)) ? 'Required' : null,
+                'last_name' => empty(trim($lname)) ? 'Required' : null,
+            ]], 400);
         }
 
-        $this->view('Student/Profile', [
-            'profile' => $profile,
-            'user' => $user,
-            'message' => $message
+        $userData = $userRepo->findById($user->user_id);
+        $userRepo->update($user->user_id, $fname, $lname, $userData->email);
+        $studentRepo->save($user->user_id, $dob, $bio);
+
+        // Return updated data
+        $profile = $studentRepo->findByUserId($user->user_id);
+        $updatedUser = $userRepo->findById($user->user_id);
+
+        $this->json([
+            'id' => $updatedUser->id,
+            'email' => $updatedUser->email,
+            'first_name' => $updatedUser->first_name,
+            'last_name' => $updatedUser->last_name,
+            'date_of_birth' => $profile ? $profile['date_of_birth'] : null,
+            'bio' => $profile ? $profile['bio'] : null
         ]);
     }
 }

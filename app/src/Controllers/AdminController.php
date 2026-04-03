@@ -4,73 +4,120 @@ namespace App\Controllers;
 
 use App\Framework\Controller;
 use App\Services\AdminService;
+use App\Middleware\AuthMiddleware;
+use App\Repositories\ReviewRepository;
 
 class AdminController extends Controller
 {
     private AdminService $adminService;
-    
+
     public function __construct()
     {
         $this->adminService = new AdminService();
     }
 
-    public function users()
+    /**
+     * GET /api/admin/users
+     */
+    public function listUsers(): void
     {
-        $this->requireAuth('admin');
+        AuthMiddleware::validate('admin');
         $users = $this->adminService->getAllUsers();
-        $this->view('Admin/Users', ['users' => $users]);
+        $this->json($users);
     }
 
-    public function editUser()
+    /**
+     * GET /api/admin/users/{id}
+     */
+    public function getUser(array $vars): void
     {
-        $this->requireAuth('admin');
-        $userId = $_GET['id'] ?? null;
+        AuthMiddleware::validate('admin');
+        $user = $this->adminService->getUser((int) $vars['id']);
 
-        if (!$userId) $this->redirect('/admin/users');
-
-        $user = $this->adminService->getUser((int)$userId);
-        
         if (!$user) {
-            $this->redirect('/admin/users');
-            return;
+            $this->json(['error' => 'User not found'], 404);
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $fname = $_POST['first_name'];
-            $lname = $_POST['last_name'];
-            $email = $_POST['email'];
-            $bio   = $_POST['bio'] ?? '';
-            
-            if ($this->adminService->updateUser($user->id, $fname, $lname, $email, $user->role, $bio)) {
-                $this->redirect('/admin/users');
-            }
-        }
-
-        $this->view('Admin/EditUser', ['user' => $user]);
+        $this->json($user);
     }
 
-    public function deleteUser()
+    /**
+     * PUT /api/admin/users/{id}
+     */
+    public function updateUser(array $vars): void
     {
-        $this->requireAuth('admin');
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = $_POST['user_id'] ?? 0;
-            $this->adminService->deleteUser((int)$userId);
-            $this->redirect('/admin/users');
+        AuthMiddleware::validate('admin');
+        $id = (int) $vars['id'];
+        $body = $this->getBody();
+
+        $fname = $body['first_name'] ?? '';
+        $lname = $body['last_name'] ?? '';
+        $email = $body['email'] ?? '';
+        $bio = $body['bio'] ?? null;
+
+        if (empty(trim($fname)) || empty(trim($lname)) || empty(trim($email))) {
+            $this->json(['error' => 'Validation failed', 'details' => [
+                'first_name' => empty(trim($fname)) ? 'Required' : null,
+                'last_name' => empty(trim($lname)) ? 'Required' : null,
+                'email' => empty(trim($email)) ? 'Required' : null,
+            ]], 400);
+        }
+
+        try {
+            $user = $this->adminService->updateUser($id, $fname, $lname, $email, $bio);
+            $this->json($user);
+        } catch (\RuntimeException $e) {
+            $this->json(json_decode($e->getMessage(), true), 404);
         }
     }
-    public function deleteProfile()
+
+    /**
+     * DELETE /api/admin/users/{id}
+     */
+    public function deleteUser(array $vars): void
     {
-        $this->requireAuth('admin');
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $profileId = $_POST['profile_id'] ?? 0;
-            $this->adminService->deleteTutorProfile((int)$profileId);
-            $this->redirect('/admin/users');
+        $admin = AuthMiddleware::validate('admin');
+        $userId = (int) $vars['id'];
+
+        try {
+            $this->adminService->deleteUser($userId, $admin->user_id);
+            http_response_code(204);
+            exit;
+        } catch (\RuntimeException $e) {
+            $error = json_decode($e->getMessage(), true);
+            $this->json($error, 400);
         }
     }
-    public function statistics()
+
+    /**
+     * DELETE /api/admin/tutor-profiles/{id}
+     */
+    public function deleteTutorProfile(array $vars): void
     {
-        $this->requireAuth('admin');
+        AuthMiddleware::validate('admin');
+        $profileId = (int) $vars['id'];
+        $this->adminService->deleteTutorProfile($profileId);
+        http_response_code(204);
+        exit;
+    }
+
+    /**
+     * GET /api/admin/stats
+     */
+    public function stats(): void
+    {
+        AuthMiddleware::validate('admin');
         $stats = $this->adminService->getDashboardStats();
-        $this->view('Admin/Statistics', ['stats' => $stats]);
+        $this->json($stats);
+    }
+
+    /**
+     * GET /api/admin/reviews — Admin review moderation listing
+     */
+    public function reviews(): void
+    {
+        AuthMiddleware::validate('admin');
+        $reviewService = new \App\Services\ReviewService();
+        $this->json($reviewService->getAllReviews());
     }
 }

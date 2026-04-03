@@ -26,16 +26,31 @@ class UserRepository extends Repository
         return $user ?: null;
     }
 
-    public function create(string $email, string $password, string $firstName, string $lastName, string $role): bool
+    /**
+     * Create a new user. Returns the new user's ID.
+     */
+    public function create(string $email, string $password, string $firstName, string $lastName, string $role): int
     {
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $this->db->prepare("INSERT INTO users (email, password, first_name, last_name, role) VALUES (:email, :pass, :fname, :lname, :role)");
-        return $stmt->execute(['email' => $email, 'pass' => $hash, 'fname' => $firstName, 'lname' => $lastName, 'role' => $role]);
+        $stmt = $this->db->prepare(
+            "INSERT INTO users (email, password, first_name, last_name, role) 
+             VALUES (:email, :pass, :fname, :lname, :role)"
+        );
+        $stmt->execute([
+            'email' => $email,
+            'pass' => $hash,
+            'fname' => $firstName,
+            'lname' => $lastName,
+            'role' => $role
+        ]);
+        return (int) $this->db->lastInsertId();
     }
 
     public function update(int $id, string $firstName, string $lastName, string $email): bool
     {
-        $stmt = $this->db->prepare("UPDATE users SET first_name = :fname, last_name = :lname, email = :email WHERE id = :id");
+        $stmt = $this->db->prepare(
+            "UPDATE users SET first_name = :fname, last_name = :lname, email = :email WHERE id = :id"
+        );
         return $stmt->execute(['fname' => $firstName, 'lname' => $lastName, 'email' => $email, 'id' => $id]);
     }
 
@@ -57,9 +72,11 @@ class UserRepository extends Repository
             return false;
         }
     }
+
     public function findAllWithBio(): array
     {
-        $sql = "SELECT u.*, COALESCE(t.bio, s.bio, 'No bio') as bio,
+        $sql = "SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.created_at,
+                COALESCE(t.bio, s.bio, 'No bio') as bio,
                 t.id as profile_id,
                 t.subject
                 FROM users u
@@ -68,20 +85,22 @@ class UserRepository extends Repository
                 ORDER BY u.id DESC";
         
         $stmt = $this->db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_OBJ);
+        return $stmt->fetchAll();
     }
 
     public function getStatistics(): array
     {
         return [
-            'total_users' => $this->db->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-            'total_tutors' => $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'tutor'")->fetchColumn(),
-            'total_students' => $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'student'")->fetchColumn(),
+            'total_users' => (int) $this->db->query("SELECT COUNT(*) FROM users")->fetchColumn(),
+            'total_tutors' => (int) $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'tutor'")->fetchColumn(),
+            'total_students' => (int) $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'student'")->fetchColumn(),
         ];
     }
-    public function findByIdWithBio(int $id): ?object
+
+    public function findByIdWithBio(int $id): ?array
     {
-        $sql = "SELECT u.*, COALESCE(t.bio, s.bio, '') as bio 
+        $sql = "SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.created_at,
+                COALESCE(t.bio, s.bio, '') as bio 
                 FROM users u
                 LEFT JOIN tutor_profiles t ON u.id = t.user_id
                 LEFT JOIN student_profiles s ON u.id = s.user_id
@@ -89,7 +108,8 @@ class UserRepository extends Repository
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_OBJ) ?: null;
+        $result = $stmt->fetch();
+        return $result ?: null;
     }
 
     public function updateBio(int $userId, string $role, ?string $bio): bool

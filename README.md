@@ -1,34 +1,61 @@
-## Strickly followed the MVC structure
+# Tutor Connect — Web Development 2
 
-You can login as a tutor. Create your profile select your subject that you teach, the days, your charge for that service, your years of experience (to show why the people who are being tutored to give you that money.), and your bio. You can view your schedule. In there it is shown to you the students name, their age and email, any messages thaat they left to you and the status, it is your choice to accept or decline the tutoring session.
+As a Tutor:
+You can register and log in to create your profile. You can select the subject you teach, your available days, your hourly rate, your years of experience (to show why students should book you), and write your bio. You can also view your schedule. In your schedule, you can see the student's name, their age and email, any messages they left for you, and the booking status. From there, it is your choice to accept or decline the tutoring session.
 
-Also you can login as a student set your profile, filter tutors based on your needs, find the one you want, select the date and "pay". and it will be on your schedule. I havent put up a fake link because 1) it wasnt mentioned in the project proposal 2) I tried and saw it looked bad
+As a Student:
+You can register, log in, and set up your profile. You can filter tutors based on your needs, find the one you want, select the date, and "pay" to book a lesson. It will then show up on your schedule. (Note: I haven't put up a fake payment gateway link because 1. it wasn't mentioned in the project proposal, and 2. I tried it and saw it looked bad/broke the flow). Students can also leave a rating and review for their tutor after a session.
 
-Finally you can login as an Admin see platform statistic; total users, platofrm earnings, total bookings, Active tutors and the most popular Tutors ordered by the top to lowest. Moreover you can manage users view, edit, delete. I didint add the option to add users because 1) wasnt mentioned in the project porpposal 2) there is no need because you can easily sign up at the start. Also you can delete the specific subject profile of a user. Lets say a tutor has 5 profiles where they teach different subjects. and in one of them in his bio he wrote a curse word, you can just edit or delete that subject.
+As an Admin:
+You can log in and see platform statistics: total users, platform earnings, total bookings, active tutors, and the most popular tutors ordered from highest to lowest. Moreover, you can manage users (view, edit, delete). (Note: I didn't add the option for Admins to create new users because it wasn't in the proposal, and there is no need since anyone can easily sign up at the start). You can also moderate content. For example, if a tutor has 5 different profiles for different subjects and writes a curse word in the bio of one of them, you can just edit or delete that specific subject profile. Admins can also moderate and delete inappropriate reviews.
 
-Thats all i guess, have a nice day.
+That's all the main features. Have a nice day!
+
+## Getting Started
+
+## 1. Start the Backend (Docker)
+
+```bash
+docker compose up -d
+```
+
+This starts:
+
+- PHP API at `http://localhost`
+- phpMyAdmin at `http://localhost:8080`
+
+## 2. Import the Database
+
+Open phpMyAdmin at `http://localhost:8080` and import `mysql.sql`, or let the Docker init script handle it.
+
+## 3. Install Composer Dependencies
+
+```bash
+docker compose exec php composer install
+```
+
+## 4. Start the Frontend (Vue)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vue app runs at `http://localhost:5173`.
 
 ## Login Credentials
 
 All accounts use the Password: password
 
-Examples:
-Role Email Password
-==================================
+## Examples: Role Email Password
+
 Admin Admin@admin password
 Tutor Enes@gmail.com password
 Student bruh@gmail.com password
-
+Student EminKarabulut@gmail.com password
 You can always create any user with any email and password you want to use.
 
-## GDPR Compliance
+## AI Disclosure
 
-Data Minimization: We only store what is needed (Name, Email, Subject). We don't store real payment info.
-Right to Delete: The Admin can fully delete a user account and all their data permanently.
-Security: Passwords are hashed using password_hash
-
-## WCAG Compliance
-
-Alt Text: Tutor profile images in the search results include descriptive alt tags
-Forms: All inputs have associated labels.
-Contrast: Used standard Bootstrap colors for good readability.
+I developed this project with the assistance of gemini. I used it to help me debug for the pagination filter, to understand the logic for validating JWT expiry in the frontend, and to help structure my Vue Pinia stores correctly based on the weekly lectures.

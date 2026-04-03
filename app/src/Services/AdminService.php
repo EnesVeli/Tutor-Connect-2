@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Services;
 
 use App\Repositories\UserRepository;
 use App\Repositories\BookingRepository;
 use App\Repositories\TutorRepository;
+use App\Repositories\ReviewRepository;
 
 class AdminService
 {
@@ -23,24 +25,37 @@ class AdminService
         return $this->userRepo->findAllWithBio();
     }
 
-    public function getUser(int $id)
+    public function getUser(int $id): ?array
     {
         return $this->userRepo->findByIdWithBio($id);
     }
 
-    public function updateUser(int $id, string $fname, string $lname, string $email, string $role, ?string $bio): bool
+    public function updateUser(int $id, string $fname, string $lname, string $email, ?string $bio): array
     {
-        $basicUpdate = $this->userRepo->update($id, $fname, $lname, $email);
-        $bioUpdate = $this->userRepo->updateBio($id, $role, $bio);
+        $user = $this->userRepo->findByIdWithBio($id);
+        if (!$user) {
+            throw new \RuntimeException(json_encode(['error' => 'User not found']));
+        }
 
-        return $basicUpdate && $bioUpdate;
+        $this->userRepo->update($id, $fname, $lname, $email);
+        if ($bio !== null) {
+            $this->userRepo->updateBio($id, $user['role'], $bio);
+        }
+
+        return $this->userRepo->findByIdWithBio($id);
     }
 
-    public function deleteUser(int $userId): bool
+    /**
+     * Delete a user. Prevents self-deletion.
+     */
+    public function deleteUser(int $userId, int $currentAdminId): bool
     {
-        if ($userId == $_SESSION['user_id']) return false;
+        if ($userId === $currentAdminId) {
+            throw new \RuntimeException(json_encode(['error' => 'Cannot delete your own account']));
+        }
         return $this->userRepo->delete($userId);
     }
+
     public function deleteTutorProfile(int $profileId): bool
     {
         $this->bookingRepo->deleteByProfileId($profileId);

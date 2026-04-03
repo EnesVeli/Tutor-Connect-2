@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Framework;
+
 use App\Config;
 use PDO;
 use PDOException;
@@ -17,7 +18,7 @@ class Repository
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            die("Database Connection Failed: " . $e->getMessage());
+            throw new \RuntimeException("Database Connection Failed: " . $e->getMessage());
         }
     }
 }

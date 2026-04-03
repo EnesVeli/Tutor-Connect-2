@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Framework\Controller;
 use App\Services\BookingService;
+use App\Middleware\AuthMiddleware;
 
 class BookingController extends Controller
 {
@@ -14,79 +15,78 @@ class BookingController extends Controller
         $this->bookingService = new BookingService();
     }
 
-    public function create()
+    /**
+     * GET /api/bookings — Get bookings for the authenticated user.
+     */
+    public function index(): void
     {
-        $this->requireAuth('student');
-
-        $profileId = $_GET['tutor_id'] ?? null;
-        if (!$profileId) die("Tutor ID is required.");
-
-        $data = $this->bookingService->getBookingFormDetails((int)$profileId);
-
-        if (!$data['tutorProfile']) die("Tutor not found.");
-
-        $this->view('Student/Book', [
-            'tutorName' => $data['tutorName'],
-            'tutorProfile' => $data['tutorProfile'],
-            'tutorId' => $profileId
-        ]);
-    }
-    public function process()
-    {
-        $this->requireAuth('student');
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $profileId = $_POST['tutor_id'];
-            $date = $_POST['date'];
-            $time = $_POST['time'];
-            $comment = $_POST['student_comment'];
-            $paymentData = $this->bookingService->preparePayment((int)$profileId, $date, $time);
-
-            $this->view('Student/Payment', array_merge($paymentData, [
-                'tutorId' => $profileId,
-                'studentComment' => $comment,
-                'date' => $paymentData['prettyDate']
-            ]));
+        $user = AuthMiddleware::validate();
+        
+        if (!in_array($user->role, ['student', 'tutor'])) {
+            $this->json(['error' => 'Forbidden'], 403);
         }
+
+        $bookings = $this->bookingService->getUserBookings($user->user_id, $user->role);
+        $this->json(['data' => $bookings, 'total' => count($bookings)]);
     }
-    public function store()
+
+    /**
+     * POST /api/bookings — Create a new booking (student only).
+     * Student ID comes from the JWT, never from the request body.
+     */
+    public function create(): void
     {
-        $this->requireAuth('student');
+        $user = AuthMiddleware::validate('student');
+        $body = $this->getBody();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $studentId = $_SESSION['user_id'];
-            $profileId = $_POST['tutor_id'];
-            $scheduledAt = $_POST['scheduled_at'];
-            $comment = $_POST['student_comment'];
+        $profileId = (int) ($body['tutor_profile_id'] ?? 0);
+        $scheduledAt = $body['scheduled_at'] ?? '';
+        $comment = $body['student_comment'] ?? '';
 
-            if ($this->bookingService->createBooking($studentId, (int)$profileId, $scheduledAt, $comment)) {
-                $this->view('Bookings/Success');
-            } else {
-                echo "Error saving booking. Profile might not exist.";
-            }
+        if ($profileId <= 0 || empty($scheduledAt)) {
+            $this->json([
+                'error' => 'Validation failed',
+                'details' => [
+                    'tutor_profile_id' => $profileId <= 0 ? 'Tutor profile ID is required' : null,
+                    'scheduled_at' => empty($scheduledAt) ? 'Scheduled time is required' : null
+                ]
+            ], 400);
+        }
+
+        try {
+            $booking = $this->bookingService->createBooking($user->user_id, $profileId, $scheduledAt, $comment);
+            $this->json($booking, 201);
+        } catch (\RuntimeException $e) {
+            $error = json_decode($e->getMessage(), true);
+            $this->json($error, 422);
         }
     }
 
-    public function index()
+    /**
+     * PUT /api/bookings/{id} — Update booking status
+     */
+    public function update(array $vars): void
     {
-        $this->requireAuth(); 
-        
-        $bookings = $this->bookingService->getUserBookings($_SESSION['user_id'], $_SESSION['user_role']);
-        
-        $this->view('Bookings/List', ['bookings' => $bookings]);
-    }
+        $user = AuthMiddleware::validate('tutor');
+        $bookingId = (int) $vars['id'];
+        $body = $this->getBody();
+        $status = $body['status'] ?? '';
 
-    public function update()
-    {
-        $this->requireAuth('tutor');
+        if (empty($status)) {
+            $this->json(['error' => 'Status is required'], 400);
+        }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $bookingId = $_POST['booking_id'];
-            $status = $_POST['status'];
-
-            $this->bookingService->updateBookingStatus($bookingId, $status);
-            
-            $this->redirect('/bookings');
+        try {
+            $booking = $this->bookingService->updateBookingStatus($bookingId, $status, $user->user_id);
+            $this->json($booking);
+        } catch (\RuntimeException $e) {
+            $error = json_decode($e->getMessage(), true);
+            $status = match($error['error'] ?? '') {
+                'Forbidden' => 403,
+                'Booking not found' => 404,
+                default => 400
+            };
+            $this->json($error, $status);
         }
     }
 }

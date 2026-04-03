@@ -2,8 +2,10 @@
 
 namespace App\Controllers;
 
-use App\Framework\Controller; // Inherit from Base Controller
-use App\Services\AuthService; // Use the new Service
+use App\Framework\Controller;
+use App\Services\AuthService;
+use App\Middleware\AuthMiddleware;
+use App\Repositories\UserRepository;
 
 class AuthController extends Controller
 {
@@ -14,48 +16,71 @@ class AuthController extends Controller
         $this->authService = new AuthService();
     }
 
-    public function login()
+    /**
+     * POST /api/auth/register
+     */
+    public function register(): void
     {
-        $error = null;
+        $body = $this->getBody();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
+        $firstName = $body['first_name'] ?? '';
+        $lastName = $body['last_name'] ?? '';
+        $email = $body['email'] ?? '';
+        $password = $body['password'] ?? '';
+        $role = $body['role'] ?? 'student';
 
-            $error = $this->authService->attemptLogin($email, $password);
-
-            if ($error === null) {
-                $this->redirect('/');
-            }
+        try {
+            $user = $this->authService->registerUser($email, $password, $firstName, $lastName, $role);
+            $this->json($user, 201);
+        } catch (\RuntimeException $e) {
+            $error = json_decode($e->getMessage(), true);
+            $status = isset($error['details']) ? 400 : 409;
+            $this->json($error, $status);
         }
-
-        $this->view('Login', ['error' => $error]);
     }
 
-    public function register()
+    /**
+     * POST /api/auth/login
+     */
+    public function login(): void
     {
-        $error = null;
+        $body = $this->getBody();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $firstName = $_POST['first_name'] ?? '';
-            $lastName = $_POST['last_name'] ?? '';
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
-            $role = $_POST['role'] ?? 'student';
+        $email = $body['email'] ?? '';
+        $password = $body['password'] ?? '';
 
-            $error = $this->authService->registerUser($email, $password, $firstName, $lastName, $role);
-
-            if ($error === null) {
-                $this->redirect('/login'); // Success!
-            }
+        if (empty($email) || empty($password)) {
+            $this->json(['error' => 'Email and password are required'], 400);
         }
 
-        $this->view('Register', ['error' => $error]);
+        try {
+            $result = $this->authService->attemptLogin($email, $password);
+            $this->json($result, 200);
+        } catch (\RuntimeException $e) {
+            $this->json(json_decode($e->getMessage(), true), 401);
+        }
     }
 
-    public function logout()
+    /**
+     * GET /api/auth/me
+     */
+    public function me(): void
     {
-        $this->authService->logout();
-        $this->redirect('/login');
+        $userData = AuthMiddleware::validate();
+
+        $userRepo = new UserRepository();
+        $user = $userRepo->findById($userData->user_id);
+
+        if (!$user) {
+            $this->json(['error' => 'User not found'], 404);
+        }
+
+        $this->json([
+            'id' => $user->id,
+            'email' => $user->email,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'role' => $user->role
+        ]);
     }
 }

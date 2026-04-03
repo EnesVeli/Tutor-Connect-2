@@ -3,18 +3,16 @@
 namespace App\Repositories;
 
 use App\Framework\Repository;
-use App\Models\StudentProfile;
 use PDO;
 
 class StudentRepository extends Repository
 {
-    public function findByUserId(int $userId): ?StudentProfile
+    public function findByUserId(int $userId): ?array
     {
         $stmt = $this->db->prepare("SELECT * FROM student_profiles WHERE user_id = :uid");
         $stmt->execute(['uid' => $userId]);
-        $stmt->setFetchMode(PDO::FETCH_CLASS, StudentProfile::class);
-        $profile = $stmt->fetch();
-        return $profile ?: null;
+        $result = $stmt->fetch();
+        return $result ?: null;
     }
 
     public function save(int $userId, string $dob, string $bio): bool
