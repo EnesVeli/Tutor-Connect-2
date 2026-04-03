@@ -58,4 +58,4 @@ You can always create any user with any email and password you want to use.
 
 ## AI Disclosure
 
-I developed this project with the assistance of gemini. I used it to help me debug for the pagination filter, to understand the logic for validating JWT expiry in the frontend, and to help structure my Vue Pinia stores correctly based on the weekly lectures.
+I developed this project with the assistance of gemini. I used it to help me debug for the pagination filter, to understand the logic for validating JWT expiry in the frontend, and to help structure my Vue Pinia stores correctly.
