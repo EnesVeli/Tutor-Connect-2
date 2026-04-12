@@ -2,9 +2,10 @@
 
 namespace App\Framework;
 
-use App\Config;
 use PDO;
 use PDOException;
+
+require_once __DIR__ . '/../../config/config.php';
 
 class Repository
 {
@@ -12,9 +13,9 @@ class Repository
 
     public function __construct()
     {
-        $dsn = "mysql:host=" . Config::dbHost() . ";dbname=" . Config::dbName() . ";charset=utf8mb4";
+        $dsn = "mysql:host=" . \DB_HOST . ";port=" . \DB_PORT . ";dbname=" . \DB_NAME . ";charset=utf8mb4";
         try {
-            $this->db = new PDO($dsn, Config::dbUser(), Config::dbPass());
+            $this->db = new PDO($dsn, \DB_USER, \DB_PASS);
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
