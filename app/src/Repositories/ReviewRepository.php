@@ -116,6 +116,8 @@ class ReviewRepository extends Repository
                 JOIN tutor_profiles tp ON reviews.tutor_profile_id = tp.id
                 JOIN users t ON tp.user_id = t.id
                 ORDER BY reviews.created_at DESC";
-        return $this->db->query($sql)->fetchAll();
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 }

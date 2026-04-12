@@ -28,7 +28,7 @@ class AuthMiddleware
         $token = substr($header, 7);
 
         try {
-            $decoded = JWT::decode($token, new Key(Config::JWT_SECRET, 'HS256'));
+            $decoded = JWT::decode($token, new Key(Config::jwtSecret(), 'HS256'));
         } catch (\Exception $e) {
             http_response_code(401);
             echo json_encode(['error' => 'Unauthorized', 'message' => 'Invalid or expired token']);

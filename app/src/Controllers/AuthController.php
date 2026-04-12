@@ -57,7 +57,13 @@ class AuthController extends Controller
             $result = $this->authService->attemptLogin($email, $password);
             $this->json($result, 200);
         } catch (\RuntimeException $e) {
-            $this->json(json_decode($e->getMessage(), true), 401);
+            $error = json_decode($e->getMessage(), true);
+            $status = match($error['error'] ?? '') {
+                'Invalid email or password' => 401,
+                'Validation failed' => 400,
+                default => 401
+            };
+            $this->json($error, $status);
         }
     }
 

@@ -2,7 +2,12 @@
   <div class="container mt-5">
     <div class="page-header">
       <h1><i class="bi bi-grid-fill me-2"></i>Welcome, {{ authStore.userName }}!</h1>
-      <p>Your student dashboard — find tutors, manage bookings, and more.</p>
+      <p>Your student dashboard - find tutors, manage bookings, and more.</p>
+    </div>
+
+    <div v-if="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ error }}
+      <button type="button" class="btn-close" @click="error = null" aria-label="Close"></button>
     </div>
 
     <div class="row g-4">
@@ -41,7 +46,6 @@
       </div>
     </div>
 
-    <!-- Recent Bookings Preview -->
     <div class="mt-5">
       <h4 class="fw-bold mb-3"><i class="bi bi-clock-history me-2"></i>Recent Bookings</h4>
       <LoadingSpinner v-if="loading" />
@@ -66,13 +70,15 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner.vue'
 const authStore = useAuthStore()
 const recentBookings = ref([])
 const loading = ref(true)
+const error = ref(null)
 
 onMounted(async () => {
+  error.value = null
   try {
     const response = await api.get('/bookings')
     recentBookings.value = response.data.data.slice(0, 3)
-  } catch {
-    // Silently fail — dashboard still usable
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Something went wrong. Please try again.'
   } finally {
     loading.value = false
   }

@@ -91,6 +91,6 @@ class AuthService
             ]
         ];
 
-        return JWT::encode($payload, Config::JWT_SECRET, 'HS256');
+        return JWT::encode($payload, Config::jwtSecret(), 'HS256');
     }
 }

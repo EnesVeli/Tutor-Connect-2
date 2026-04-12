@@ -4,16 +4,18 @@ namespace App\Controllers;
 
 use App\Framework\Controller;
 use App\Services\TutorService;
+use App\Services\ReviewService;
 use App\Middleware\AuthMiddleware;
-use App\Repositories\ReviewRepository;
 
 class TutorController extends Controller
 {
     private TutorService $tutorService;
+    private ReviewService $reviewService;
 
     public function __construct()
     {
         $this->tutorService = new TutorService();
+        $this->reviewService = new ReviewService();
     }
 
     /**
@@ -126,8 +128,7 @@ class TutorController extends Controller
     public function getReviews(array $vars): void
     {
         $id = (int) $vars['id'];
-        $reviewRepo = new ReviewRepository();
-        $reviews = $reviewRepo->findByTutorProfileId($id);
+        $reviews = $this->reviewService->getReviewsForProfile($id);
         $this->json($reviews);
     }
 
@@ -152,16 +153,17 @@ class TutorController extends Controller
             $this->json(['error' => 'Validation failed', 'details' => ['booking_id' => 'Booking ID is required']], 400);
         }
 
-        $reviewRepo = new ReviewRepository();
-
-        // Check if already reviewed 
-        $existing = $reviewRepo->findByBookingId($bookingId);
-        if ($existing) {
-            $this->json(['error' => 'You have already reviewed this booking'], 409);
+        try {
+            $review = $this->reviewService->createReview($bookingId, $user->user_id, $tutorProfileId, $rating, $comment);
+            $this->json($review, 201);
+        } catch (\RuntimeException $e) {
+            $error = json_decode($e->getMessage(), true);
+            $status = match($error['error'] ?? '') {
+                'You have already reviewed this booking' => 409,
+                'Validation failed' => 400,
+                default => 409
+            };
+            $this->json($error, $status);
         }
-
-        $id = $reviewRepo->create($bookingId, $user->user_id, $tutorProfileId, $rating, $comment);
-        $review = $reviewRepo->findById($id);
-        $this->json($review, 201);
     }
 }

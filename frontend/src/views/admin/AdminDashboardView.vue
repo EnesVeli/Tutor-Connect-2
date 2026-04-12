@@ -5,10 +5,14 @@
       <p>Platform overview and statistics.</p>
     </div>
 
+    <div v-if="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ error }}
+      <button type="button" class="btn-close" @click="error = null" aria-label="Close"></button>
+    </div>
+
     <LoadingSpinner v-if="loading" />
 
     <template v-else>
-      <!-- Stat Cards -->
       <div class="row g-4 mb-5">
         <div class="col-6 col-lg-3">
           <div class="stat-card stat-card-purple">
@@ -34,13 +38,12 @@
         <div class="col-6 col-lg-3">
           <div class="stat-card stat-card-amber">
             <i class="bi bi-currency-euro d-block mb-2"></i>
-            <div class="stat-number">€{{ stats.total_earnings }}</div>
+            <div class="stat-number">EUR {{ stats.total_earnings }}</div>
             <div class="stat-label">Total Earnings</div>
           </div>
         </div>
       </div>
 
-      <!-- Popular Tutors Table -->
       <div class="card">
         <div class="card-header bg-white">
           <h5 class="mb-0 fw-bold"><i class="bi bi-trophy me-2"></i>Most Popular Tutors</h5>
@@ -88,12 +91,17 @@ const stats = ref({
   total_bookings: 0, total_earnings: 0, tutors_list: []
 })
 const loading = ref(true)
+const error = ref(null)
 
 onMounted(async () => {
+  error.value = null
   try {
     const res = await api.get('/admin/stats')
     stats.value = res.data
-  } catch { /* handled */ }
-  finally { loading.value = false }
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Something went wrong. Please try again.'
+  } finally {
+    loading.value = false
+  }
 })
 </script>

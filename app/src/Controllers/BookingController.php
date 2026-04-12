@@ -58,7 +58,13 @@ class BookingController extends Controller
             $this->json($booking, 201);
         } catch (\RuntimeException $e) {
             $error = json_decode($e->getMessage(), true);
-            $this->json($error, 422);
+            $status = match($error['error'] ?? '') {
+                'Tutor profile not found' => 404,
+                'Forbidden' => 403,
+                'Validation failed' => 400,
+                default => 422
+            };
+            $this->json($error, $status);
         }
     }
 

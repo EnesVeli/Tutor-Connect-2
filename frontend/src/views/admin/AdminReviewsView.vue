@@ -37,11 +37,12 @@
                         :class="n <= review.rating ? 'bi bi-star-fill' : 'bi bi-star'"></i>
                     </div>
                   </td>
-                  <td class="text-truncate" style="max-width: 200px;">{{ review.comment || '—' }}</td>
+                  <td class="text-truncate" style="max-width: 200px;">{{ review.comment || '-' }}</td>
                   <td class="text-nowrap">{{ formatDate(review.created_at) }}</td>
                   <td>
-                    <button class="btn btn-sm btn-outline-danger" @click="deleteReview(review.id)">
-                      <i class="bi bi-trash me-1"></i>Delete
+                    <button class="btn btn-sm btn-outline-danger" @click="deleteReview(review)" :disabled="isSubmitting === review.id">
+                      <span v-if="isSubmitting === review.id" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                      {{ isSubmitting === review.id ? 'Please wait...' : 'Delete' }}
                     </button>
                   </td>
                 </tr>
@@ -70,6 +71,7 @@ const reviews = ref([])
 const loading = ref(true)
 const error = ref(null)
 const success = ref(null)
+const isSubmitting = ref(null)
 
 onMounted(async () => {
   try {
@@ -82,14 +84,17 @@ onMounted(async () => {
   }
 })
 
-async function deleteReview(id) {
+async function deleteReview(review) {
   error.value = null
+  isSubmitting.value = review.id
   try {
-    await api.delete(`/reviews/${id}`)
-    reviews.value = reviews.value.filter(r => r.id !== id)
+    await api.delete(`/reviews/${review.id}`)
+    reviews.value = reviews.value.filter(r => r.id !== review.id)
     success.value = 'Review deleted successfully'
   } catch (err) {
     error.value = err.response?.data?.error || 'Failed to delete review'
+  } finally {
+    isSubmitting.value = null
   }
 }
 

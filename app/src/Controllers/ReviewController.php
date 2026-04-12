@@ -37,7 +37,14 @@ class ReviewController extends Controller
             $updated = $this->reviewService->updateReview($reviewId, $user->user_id, $rating, $comment);
             $this->json($updated);
         } catch (RuntimeException $e) {
-            $this->json(json_decode($e->getMessage(), true), 403);
+            $error = json_decode($e->getMessage(), true);
+            $status = match($error['error'] ?? '') {
+                'Forbidden' => 403,
+                'Validation failed' => 400,
+                'Review not found' => 404,
+                default => 403
+            };
+            $this->json($error, $status);
             return;
         }
     }
@@ -60,7 +67,14 @@ class ReviewController extends Controller
             http_response_code(204);
             exit;
         } catch (RuntimeException $e) {
-            $this->json(json_decode($e->getMessage(), true), 403);
+            $error = json_decode($e->getMessage(), true);
+            $status = match($error['error'] ?? '') {
+                'Forbidden' => 403,
+                'Validation failed' => 400,
+                'Review not found' => 404,
+                default => 403
+            };
+            $this->json($error, $status);
             return;
         }
     }

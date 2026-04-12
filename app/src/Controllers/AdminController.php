@@ -67,7 +67,14 @@ class AdminController extends Controller
             $user = $this->adminService->updateUser($id, $fname, $lname, $email, $bio);
             $this->json($user);
         } catch (\RuntimeException $e) {
-            $this->json(json_decode($e->getMessage(), true), 404);
+            $error = json_decode($e->getMessage(), true);
+            $status = match($error['error'] ?? '') {
+                'User not found' => 404,
+                'Validation failed' => 400,
+                'Cannot delete your own account' => 403,
+                default => 400
+            };
+            $this->json($error, $status);
         }
     }
 
@@ -85,7 +92,13 @@ class AdminController extends Controller
             exit;
         } catch (\RuntimeException $e) {
             $error = json_decode($e->getMessage(), true);
-            $this->json($error, 400);
+            $status = match($error['error'] ?? '') {
+                'User not found' => 404,
+                'Validation failed' => 400,
+                'Cannot delete your own account' => 403,
+                default => 400
+            };
+            $this->json($error, $status);
         }
     }
 

@@ -84,16 +84,24 @@ class UserRepository extends Repository
                 LEFT JOIN student_profiles s ON u.id = s.user_id
                 ORDER BY u.id DESC";
         
-        $stmt = $this->db->query($sql);
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 
     public function getStatistics(): array
     {
+        $totalUsersStmt = $this->db->prepare("SELECT COUNT(*) FROM users");
+        $totalUsersStmt->execute();
+        $totalTutorsStmt = $this->db->prepare("SELECT COUNT(*) FROM users WHERE role = 'tutor'");
+        $totalTutorsStmt->execute();
+        $totalStudentsStmt = $this->db->prepare("SELECT COUNT(*) FROM users WHERE role = 'student'");
+        $totalStudentsStmt->execute();
+
         return [
-            'total_users' => (int) $this->db->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-            'total_tutors' => (int) $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'tutor'")->fetchColumn(),
-            'total_students' => (int) $this->db->query("SELECT COUNT(*) FROM users WHERE role = 'student'")->fetchColumn(),
+            'total_users' => (int) $totalUsersStmt->fetchColumn(),
+            'total_tutors' => (int) $totalTutorsStmt->fetchColumn(),
+            'total_students' => (int) $totalStudentsStmt->fetchColumn(),
         ];
     }
 

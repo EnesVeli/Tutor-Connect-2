@@ -22,6 +22,28 @@ class ReviewService
         return $this->reviewRepo->findAll();
     }
 
+    public function getReviewsForProfile(int $tutorProfileId): array
+    {
+        return $this->reviewRepo->findByTutorProfileId($tutorProfileId);
+    }
+
+    public function createReview(
+        int $bookingId,
+        int $studentId,
+        int $tutorProfileId,
+        int $rating,
+        string $comment
+    ): object {
+        $existing = $this->reviewRepo->findByBookingId($bookingId);
+        if ($existing) {
+            throw new RuntimeException(json_encode(['error' => 'You have already reviewed this booking']));
+        }
+
+        $id = $this->reviewRepo->create($bookingId, $studentId, $tutorProfileId, $rating, $comment);
+        $review = $this->reviewRepo->findById($id);
+        return (object) ($review ?? []);
+    }
+
     /**
      * Update a review. Enforces ownership.
      */

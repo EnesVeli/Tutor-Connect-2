@@ -35,8 +35,9 @@
                   <button class="btn btn-sm btn-outline-primary" @click="startEdit(booking)">
                     <i class="bi bi-pencil me-1"></i>Edit
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" @click="deleteReview(booking)">
-                    <i class="bi bi-trash me-1"></i>Delete
+                  <button class="btn btn-sm btn-outline-danger" @click="deleteReview(booking)" :disabled="isSubmitting === booking.id">
+                    <span v-if="isSubmitting === booking.id" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    {{ isSubmitting === booking.id ? 'Please wait...' : 'Delete' }}
                   </button>
                 </div>
               </template>
@@ -114,6 +115,7 @@ const error = ref(null)
 const success = ref(null)
 const reviewForms = reactive({})
 const editingReview = reactive({})
+const isSubmitting = ref(null)
 
 onMounted(async () => {
   try {
@@ -214,6 +216,7 @@ async function saveEdit(booking) {
 // ── Delete review ──────────────────────────────────────────────────
 async function deleteReview(booking) {
   error.value = null
+  isSubmitting.value = booking.id
   try {
     await api.delete(`/reviews/${booking.review_id}`)
     booking.review_id = null
@@ -225,6 +228,8 @@ async function deleteReview(booking) {
     success.value = 'Review deleted.'
   } catch (err) {
     error.value = err.response?.data?.error || 'Failed to delete review'
+  } finally {
+    isSubmitting.value = null
   }
 }
 </script>

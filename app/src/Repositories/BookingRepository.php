@@ -80,13 +80,17 @@ class BookingRepository extends Repository
      */
     public function getStatistics(): array
     {
-        $totalBookings = (int) $this->db->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
+        $totalBookingsStmt = $this->db->prepare("SELECT COUNT(*) FROM bookings");
+        $totalBookingsStmt->execute();
+        $totalBookings = (int) $totalBookingsStmt->fetchColumn();
 
         $earningsSql = "SELECT COALESCE(SUM(t.hourly_rate), 0) 
                         FROM bookings b 
                         JOIN tutor_profiles t ON b.profile_id = t.id 
                         WHERE b.status IN ('confirmed', 'completed')";
-        $totalEarnings = (float) $this->db->query($earningsSql)->fetchColumn();
+        $totalEarningsStmt = $this->db->prepare($earningsSql);
+        $totalEarningsStmt->execute();
+        $totalEarnings = (float) $totalEarningsStmt->fetchColumn();
 
         return [
             'total_bookings' => $totalBookings,
@@ -104,7 +108,9 @@ class BookingRepository extends Repository
                 JOIN users u ON b.tutor_id = u.id
                 GROUP BY b.tutor_id, u.first_name, u.last_name
                 ORDER BY booking_count DESC";
-        return $this->db->query($sql)->fetchAll();
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 
     /**
