@@ -11,8 +11,7 @@ RUN apt-get update \
 WORKDIR /var/www/html
 COPY . .
 
-WORKDIR /var/www/html/app
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 EXPOSE 8080
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /var/www/html/app/public"]
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /var/www/html/public"]
