@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.3-cli
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl unzip libzip-dev \
@@ -9,11 +9,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
-
 COPY . .
 
-RUN cd app && composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+WORKDIR /var/www/html/app
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 EXPOSE 8080
-
 CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /var/www/html/app/public"]
